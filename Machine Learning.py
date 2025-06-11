@@ -13,11 +13,10 @@ from scipy.stats import boxcox
 import io
 from packaging import version
 import missingno as msno
-import category_encoders as ce  # For binary and other encodings
+import category_encoders as ce
 import traceback
 
 
-# Machine Learning imports
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, classification_report
 from sklearn.svm import SVC
@@ -46,31 +45,25 @@ from sklearn.metrics import (
     silhouette_score, davies_bouldin_score
 )
 
-# Page configuration
 st.set_page_config(page_title="Data Preprocessing & ML Tool", layout="wide")
 
-# Title
 st.title("📊 Data Preprocessing & Machine Learning Tool")
 
-# Sidebar for file upload
 with st.sidebar:
     st.header("Upload Your Data")
     uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
     
     if uploaded_file is not None:
         st.success("File uploaded successfully!")
-        # Read the file
         df = pd.read_csv(uploaded_file)
 
     else:
         st.info("Please upload a CSV file to get started.")
         st.stop()
 
-# Main content
 
 def show_missing_value_percent(df):
     st.subheader("🕳 Missing Values (% per column)")
-    # حساب النسبة المئوية للقيم المفقودة
     missing_ratio = df.isnull().sum() / len(df) * 100
     missing_ratio = missing_ratio[missing_ratio > 0].sort_values(ascending=False)
 
@@ -81,22 +74,17 @@ def show_missing_value_percent(df):
         st.info(f"🔢 Number of columns with missing values: {len(missing_ratio)}")
         
         
-    # Data Overview Section
 st.header("📊 Data Overview")
-# Display original data
 st.subheader("Original Data")
 st.dataframe(df.head())
-# Display  data info
 st.subheader("🧾 Data Info")
 buffer = io.StringIO()
 df.info(buf=buffer)
 info_str = buffer.getvalue()
 st.code(info_str, language='text')
-# display data description
 st.subheader(" 🧮 Data Description")
 st.dataframe(df.describe())   
     
-#Duplicates Section
 st.header("Duplicate Values")
 
 try:
@@ -110,13 +98,11 @@ except Exception as e:
         st.error(f"❌ Error: {e}")
 
 
-# Handle Duplicate Values
 
 try:
         duplicate_count = df.duplicated().sum()
         if duplicate_count > 0:
             df = df.drop_duplicates()
-            st.session_state['df'] = df  # تحديث البيانات داخل الجلسة
             st.success(f"🧹 Removed {duplicate_count} duplicate rows successfully!")
         else:
             st.success("✅ No duplicate values found.")
@@ -146,7 +132,6 @@ st.dataframe(df.head())
           
 
 
-# 2. Visualization for missing values
 st.header("Missing Values Visualization")
 
 option = st.radio(
@@ -200,9 +185,7 @@ else:
     st.success("No missing values found in the dataset!")
 
 
-# 3. Missing Values Imputation
 st.header("3. Handle Missing Values")
-# Get columns with missing values
 missing_cols = df.columns[df.isnull().any()].tolist()
 
 
@@ -217,7 +200,6 @@ missing_stats_before = pd.DataFrame({
 st.write("### Missing Values Statistics (Before)")
 st.dataframe(missing_stats_before.style.format({'Missing %': '{:.2f}%'}))
 
-    # Let user select which columns to impute
 cols_to_impute = st.multiselect(
         "Select columns to impute", 
         options=missing_cols,
@@ -225,27 +207,22 @@ cols_to_impute = st.multiselect(
         help="Choose which columns to apply missing value imputation"
     )
 
-    # Initialize imputation_settings dictionary
 imputation_settings = {}
     
 for col in cols_to_impute:
         st.markdown(f"### Column: {col}")
         st.write(f"- Current missing values: {df[col].isnull().sum()} ({round(df[col].isnull().mean()*100, 2)}%)")
         
-        # Initialize variables for this column
         strategy = None
         fill_value = None
         n_neighbors = None
         max_iter = None
         
-        # Determine column type
         col_type = "numeric" if pd.api.types.is_numeric_dtype(df[col]) else "categorical"
         
-        # Create columns for layout
         col1, col2 = st.columns(2)
         
         with col1:
-            # Select imputation method based on column type
             if col_type == "numeric":
                 method = st.selectbox(
                     f"Method for {col}",
@@ -260,7 +237,6 @@ for col in cols_to_impute:
                 )
         
         with col2:
-            # Show method-specific options
             if method == "Simple Imputer":
                 if col_type == "numeric":
                     strategy = st.selectbox(
@@ -317,7 +293,6 @@ for col in cols_to_impute:
                     key=f"iter_{col}"
                 )
         
-        # Store settings for this column
         imputation_settings[col] = {
             "type": col_type,
             "method": method,
@@ -327,11 +302,8 @@ for col in cols_to_impute:
             "max_iter": max_iter
         }
 
-    # Apply imputation when button clicked
 
-        
-        
-        # Group columns by imputation method for efficiency
+
 simple_numeric = []
 simple_categorical = []
 fill_values = {}
@@ -351,7 +323,6 @@ for col, settings in imputation_settings.items():
     elif settings["method"] == "Iterative Imputer":
         iterative_cols.append(col)
 
-# Apply SimpleImputer to numeric columns
 for col, strategy, fill_value in simple_numeric:
     if strategy == "constant":
         imputer = SimpleImputer(strategy=strategy, fill_value=fill_value)
@@ -359,7 +330,6 @@ for col, strategy, fill_value in simple_numeric:
         imputer = SimpleImputer(strategy=strategy)
     df[[col]] = imputer.fit_transform(df[[col]])
 
-# Apply SimpleImputer to categorical columns
 for col, strategy, fill_value in simple_categorical:
     if strategy == "constant":
         imputer = SimpleImputer(strategy=strategy, fill_value=fill_value)
@@ -367,26 +337,21 @@ for col, strategy, fill_value in simple_categorical:
         imputer = SimpleImputer(strategy=strategy)
     df[[col]] = imputer.fit_transform(df[[col]])
 
-# Apply fill with value
 for col, value in fill_values.items():
     df[col] = df[col].fillna(value)
 
-# Apply KNN Imputer (must be done together for all KNN columns)
 if knn_cols:
     n_neighbors = imputation_settings[knn_cols[0]]["n_neighbors"]
     knn_imputer = KNNImputer(n_neighbors=n_neighbors)
     df[knn_cols] = knn_imputer.fit_transform(df[knn_cols])
 
-# Apply Iterative Imputer (must be done together for all iterative columns)
 if iterative_cols:
     max_iter = imputation_settings[iterative_cols[0]]["max_iter"]
     iterative_imputer = IterativeImputer(max_iter=max_iter, random_state=42)
     df[iterative_cols] = iterative_imputer.fit_transform(df[iterative_cols])
 
-# Show after imputation results
 st.subheader("Imputation Results")
 
-# Calculate missing values after imputation
 missing_stats_after = pd.DataFrame({
     'Column': cols_to_impute,
     'Missing Before': [df[col].isnull().sum() for col in cols_to_impute],
@@ -399,7 +364,6 @@ missing_stats_after = pd.DataFrame({
 st.write("### Missing Values Count Comparison")
 st.dataframe(missing_stats_after)
 
-# Visualize remaining missing values
 if df.isnull().any().any():
     st.subheader(" Missing Values After Imputation")
     fig_after, ax_after = plt.subplots(figsize=(12, 6))
@@ -410,7 +374,6 @@ if df.isnull().any().any():
 else:
     st.success("🎉 All missing values have been successfully imputed!")
     
-    # Show quick distribution comparison
     st.subheader(" Missing Values After Imputation")
     fig_after, ax_after = plt.subplots(figsize=(12, 6))
     msno.matrix(df, ax=ax_after, color=(0.8, 0.3, 0.3))
@@ -420,23 +383,20 @@ else:
         
         
         
-        # Update the dataframe
 
 
 
 df_num = df.select_dtypes(include=[np.number])
 
-# Draw Boxplots
 st.subheader("📦 show outliers")
 
 if not df_num.empty:
     num_cols = df_num.columns
     
-    # Draw boxplots for each numeric column in separate subplot
     fig, axes = plt.subplots(nrows=1, ncols=len(num_cols), figsize=(5 * len(num_cols), 5))
     
     if len(num_cols) == 1:
-        axes = [axes]  # Convert to list if single column
+        axes = [axes]
                 
     for i, col in enumerate(num_cols):
         sns.boxplot(data=df_num, y=col, ax=axes[i], color="#b480b8")
@@ -450,17 +410,14 @@ if not df_num.empty:
 
 numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
 
-  
-    # 5-6. Outlier Detection & Handling
+
 st.header("5-6. Outlier Detection & Handling")
 
-    # Get numeric columns
 numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
 
 if not numeric_cols:
     st.warning("No numeric columns found for outlier detection!")
 else:
-    # Let user select which columns to process
     selected_cols = st.multiselect(
         "Select columns for outlier handling",
         options=numeric_cols,
@@ -472,7 +429,6 @@ else:
         st.warning("Please select at least one column")
         st.stop()
     
-    # Outlier detection settings
     out_col1, out_col2 = st.columns(2)
     
     with out_col1:
@@ -481,31 +437,26 @@ else:
     with out_col2:
         handle_method = st.selectbox("Choose how to handle outliers", 
                                 ['Remove outliers', 'Winsorization', 'Clip outliers'])
-    
-    # Button to detect and handle outliers in selected columns
 
 
 original_row_count = len(df)
 results = []
         
-# Create figure for before/after comparison
 fig, axes = plt.subplots(len(selected_cols), 2, figsize=(15, 5*len(selected_cols)))
 
 if len(selected_cols) == 1:
-    axes = [axes]  # Ensure axes is 2D even for single column
+    axes = [axes]
 
 for i, col in enumerate(selected_cols):
-    # Before handling - left column
     sns.boxplot(y=df[col], ax=axes[i][0], color='skyblue')
     axes[i][0].set_title(f"{col} (Before)")
     
-    # Detect outliers
     if outlier_method == 'Z-Score':
         z_scores = np.abs(stats.zscore(df[col]))
         outliers_mask = z_scores > 3
         lower_bound = None
         upper_bound = None
-    else:  # IQR
+    else:
         Q1 = df[col].quantile(0.25)
         Q3 = df[col].quantile(0.75)
         IQR = Q3 - Q1
@@ -515,7 +466,6 @@ for i, col in enumerate(selected_cols):
     
     outlier_count = sum(outliers_mask)
     
-    # Handle outliers
     if handle_method == 'Remove outliers':
         if outlier_method == 'Z-Score':
             df = df[z_scores <= 3]
@@ -525,12 +475,11 @@ for i, col in enumerate(selected_cols):
     elif handle_method == 'Winsorization':
         df[col] = winsorize(df[col], limits=[0.05, 0.05])
         action = "winsorized"
-    else:  # Clip outliers
+    else:
         if lower_bound is not None and upper_bound is not None:
             df[col] = df[col].clip(lower=lower_bound, upper=upper_bound)
         action = "clipped"
     
-    # After handling - right column
     sns.boxplot(y=df[col], ax=axes[i][1], color='lightgreen')
     axes[i][1].set_title(f"{col} (After {action})")
     
@@ -538,19 +487,16 @@ for i, col in enumerate(selected_cols):
 
 plt.tight_layout()
 
-# Show before/after comparison
 st.subheader("Before vs After Outlier Handling")
 st.pyplot(fig)
 
 
-# Show row count changes if rows were removed
 if handle_method == 'Remove outliers':
     new_row_count = len(df)
     st.write(f"📊 Row count before: {original_row_count} | After: {new_row_count}")
     st.write(f"📉 Rows removed: {original_row_count - new_row_count}")
     
 
-# Update the data in session state
 
 st.success(f"Outlier handling completed for {len(selected_cols)} selected columns!")
 
@@ -558,7 +504,6 @@ st.success(f"Outlier handling completed for {len(selected_cols)} selected column
 
 st.header("📊 Data Visualization")
 
-# Create tabs for different visualization types
 viz_tab1, viz_tab2 = st.tabs(["Numerical Data", "Categorical Data"])
 
 with viz_tab1:
@@ -568,13 +513,12 @@ with viz_tab1:
     if not numeric_cols:
         st.warning("No numerical columns found for visualization!")
     else:
-        # Single variable plots
         st.markdown("### Single Variable Analysis")
         num_col1 = st.selectbox("Select numerical column", numeric_cols, key='num_col1')
         
         plot_type = st.radio("Select plot type", 
-                           ["Histogram", "Density Plot", "Box Plot", "Violin Plot"], 
-                           key='num_plot_type')
+                        ["Histogram", "Density Plot", "Box Plot", "Violin Plot"], 
+                        key='num_plot_type')
         
         if st.button("Generate Numerical Plot"):
             fig, ax = plt.subplots(figsize=(10, 6))
@@ -595,7 +539,6 @@ with viz_tab1:
             st.pyplot(fig)
             plt.close(fig)
         
-        # Two variable plots
         st.markdown("### Two Variable Analysis")
         col1, col2 = st.columns(2)
         with col1:
@@ -631,7 +574,6 @@ with viz_tab2:
     if not cat_cols:
         st.warning("No categorical columns found for visualization!")
     else:
-        # Single categorical variable plots
         st.markdown("### Single Variable Analysis")
         cat_col = st.selectbox("Select categorical column", cat_cols, key='cat_col')
         
@@ -666,7 +608,6 @@ with viz_tab2:
             st.pyplot(fig)
             plt.close(fig)
         
-        # Two variable analysis (categorical vs numerical)
         st.markdown("### Categorical vs Numerical Analysis")
         col1, col2 = st.columns(2)
         with col1:
@@ -708,11 +649,9 @@ if not numeric_cols:
 else:
     st.markdown("### Correlation Matrix")
     
-    # Calculate correlation matrix
     corr_matrix = df[numeric_cols].corr()
     
     
-    # Plot heatmap
     fig, ax = plt.subplots(figsize=(10, 8))
     sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0, ax=ax)
     ax.set_title("Correlation Matrix of Numerical Features")
@@ -721,11 +660,9 @@ else:
     
     st.markdown("### Top Correlated Pairs")
     
-    # Get top correlated pairs
     corr_pairs = corr_matrix.unstack().sort_values(ascending=False)
     top_pairs = corr_pairs[corr_pairs != 1].head(10)
     
-    # Display top pairs
     st.write("Top 10 most correlated feature pairs:")
     st.dataframe(top_pairs.reset_index().rename(columns={'level_0': 'Feature 1', 
                                                       'level_1': 'Feature 2', 
@@ -739,19 +676,14 @@ else:
 
 st.header("4. Categorical Data Encoding")
 
-# تحديد الأعمدة التصنيفية
 categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
 
 if categorical_cols:
     col1, col2 = st.columns(2)
 
-    # ----------------------------
-    # العمود الأول: اختيار طريقة الترميز لكل عمود
-    # ----------------------------
     with col1:
         st.subheader("Select Columns and Encoding Method")
 
-        # تخزين الإعدادات مؤقتاً في قاموس
         encoding_settings = {}
 
         for col in categorical_cols:
@@ -792,9 +724,7 @@ try:
                 df.drop(columns=[col], inplace=True)
                 st.success(f"✅ Most-Frequent Encoding applied to '{col}'")
 
-            # إذا كانت 'None' → لا تفعل شيئاً
 
-        # عرض البيانات بعد التغيير
         st.success("🎉 All selected encodings applied successfully!")
 
 except Exception as e:
@@ -804,13 +734,6 @@ except Exception as e:
 st.dataframe(df.head())
 
 
-
-# Correlation Analysis Section
-
-
-
-# 7-8. Feature Scaling
-# Enhanced Feature Scaling Section
 st.header("7-8. Feature Scaling")
 
 scale_col1, scale_col2 = st.columns(2)
@@ -837,7 +760,6 @@ if len(scale_columns) > 0:
         st.dataframe(df.head())
 
         
-# 9-10. Skewness handling
 st.header("9-10. Skewness Analysis & Transformation")
 
 skew_col1, skew_col2 = st.columns(2)
@@ -848,11 +770,9 @@ with skew_col1:
                                 ['None'] + numeric_cols if numeric_cols else ['None'])
 
 if skew_column != 'None':
-    # Calculate skewness
     skewness = df[skew_column].skew()
     st.write(f"Skewness of {skew_column}: {skewness:.2f}")
     
-    # Interpret skewness
     if abs(skewness) < 0.5:
         st.success("The distribution is approximately symmetric")
     elif 0.5 <= abs(skewness) < 1:
@@ -860,13 +780,11 @@ if skew_column != 'None':
     else:
         st.error("The distribution is highly skewed")
     
-    # Show distribution plot
     fig, ax = plt.subplots(figsize=(10, 4))
     sns.histplot(df[skew_column], kde=True, ax=ax,color='#ef8d56')
     plt.title(f'Distribution of {skew_column}')
     st.pyplot(fig)
     
-    # Transformation options
     with skew_col2:
         transform_method = st.selectbox("Select transformation method", 
                                         ['Log Transformation', 'Box-Cox Transformation'])
@@ -880,14 +798,13 @@ if skew_column != 'None':
             else:
                 df[skew_column] = np.log(df[skew_column])
             st.success("Applied log transformation")
-    else:  # Box-Cox
+    else:
             if (df[skew_column] <= 0).any():
                 st.error("Box-Cox requires strictly positive values. Cannot apply transformation.")
             else:
                 df[skew_column], _ = boxcox(df[skew_column])
                 st.success("Applied Box-Cox transformation")
         
-        # Show after transformation
     new_skewness = df[skew_column].skew()
     st.write(f"New skewness: {new_skewness:.2f}")
         
@@ -903,19 +820,18 @@ if skew_column != 'None':
 st.header("Machine Learning Models")
 
 
-
-# اختيار المشكلة ونوع النموذج
 problem_type = st.radio("Select problem type", ["Classification", "Regression", "Clustering"])
 
 if problem_type in ["Classification", "Regression"]:
-    # اختيار المتغير الهدف للتصنيف/الانحدار
     target_col = st.selectbox("Select target variable", df.columns)
     
-    # تقسيم البيانات
+    if not target_col:
+        st.warning("Please select a target column first.")
+        st.stop()
+    
     X = df.drop(columns=[target_col])
     y = df[target_col]
     
-    # معالجة البيانات
     numeric_features = X.select_dtypes(include=['int64', 'float64']).columns
     categorical_features = X.select_dtypes(include=['object', 'category']).columns
     
@@ -933,12 +849,10 @@ if problem_type in ["Classification", "Regression"]:
             ('cat', categorical_transformer, categorical_features)
         ])
     
-    # ترميز المتغير الهدف للتصنيف
     if problem_type == "Classification":
         le = LabelEncoder()
         y_encoded = le.fit_transform(y)
     
-    # تقسيم البيانات
     test_size = st.slider("Test size ratio", 0.1, 0.5, 0.2, 0.05)
     random_state = st.slider("Random state", 0, 100, 42)
     
@@ -950,7 +864,7 @@ if problem_type in ["Classification", "Regression"]:
                 random_state=random_state,
                 stratify=y_encoded if len(np.unique(y_encoded)) > 1 else None
             )
-        else:  # Regression
+        else:
             X_train, X_test, y_train, y_test = train_test_split(
                 X, y, 
                 test_size=test_size, 
@@ -960,7 +874,6 @@ if problem_type in ["Classification", "Regression"]:
         st.error(f"Error in train-test split: {str(e)}")
         st.stop()
 
-# اختيار النموذج
 if problem_type == "Classification":
     st.subheader("Classification Models")
     model_name = st.selectbox("Select model", 
@@ -1047,7 +960,6 @@ elif problem_type == "Clustering":
         model_params['linkage'] = st.selectbox("Linkage", ["ward", "complete", "average", "single"])
         model = AgglomerativeClustering(**model_params)
 
-# إنشاء وتدريب النموذج
 if problem_type in ["Classification", "Regression"]:
     model_pipeline = Pipeline(steps=[
         ('preprocessor', preprocessor),
@@ -1064,7 +976,6 @@ if problem_type in ["Classification", "Regression"]:
                 y_test_original = le.inverse_transform(y_test)
                 y_pred_original = le.inverse_transform(y_pred)
                 
-                # حساب المقاييس
                 st.subheader("Classification Metrics")
                 metrics_df = pd.DataFrame({
                     "Metric": ["Accuracy", "Precision", "Recall", "F1 Score"],
@@ -1094,7 +1005,6 @@ if problem_type in ["Classification", "Regression"]:
                 ax.set_ylabel('Actual')
                 st.pyplot(fig)
                 
-                # تقرير التصنيف
                 st.subheader("Classification Report")
                 report = classification_report(y_test_original, y_pred_original, output_dict=True)
                 report_df = pd.DataFrame(report).transpose()
@@ -1115,7 +1025,6 @@ if problem_type in ["Classification", "Regression"]:
                 })
                 st.dataframe(metrics_df.style.format({"Value": "{:.4f}"}))
                 
-                # رسم نتائج الانحدار
                 st.subheader("Regression Plot")
                 fig, ax = plt.subplots()
                 ax.scatter(y_test, y_pred, alpha=0.5)
@@ -1127,7 +1036,6 @@ if problem_type in ["Classification", "Regression"]:
 elif problem_type == "Clustering":
     if st.button("Apply Clustering"):
         with st.spinner("Clustering data..."):
-            # معالجة البيانات للتجميع
             preprocessor = ColumnTransformer(
                 transformers=[
                     ('num', StandardScaler(), numeric_features),
@@ -1136,16 +1044,13 @@ elif problem_type == "Clustering":
             
             X_processed = preprocessor.fit_transform(X)
             
-            # تطبيق التجميع
             clusters = model.fit_predict(X_processed)
             
-            # إضافة التجميع إلى البيانات الأصلية
             df_clustered = df.copy()
             df_clustered['Cluster'] = clusters
             
             st.subheader("Clustering Results")
             
-            # حساب مقاييس التجميع (إذا كان ذلك ممكنًا)
             if model_name != "DBSCAN" or len(np.unique(clusters)) > 1:
                 try:
                     silhouette = silhouette_score(X_processed, clusters)
@@ -1159,16 +1064,13 @@ elif problem_type == "Clustering":
                 except:
                     st.warning("Could not calculate clustering metrics for this configuration")
             
-            # عرض توزيع العناقيد
             st.subheader("Cluster Distribution")
             cluster_counts = pd.Series(clusters).value_counts().sort_index()
             st.bar_chart(cluster_counts)
             
-            # عرض البيانات مع العناقيد
             st.subheader("Clustered Data Preview")
             st.dataframe(df_clustered.head())
             
-            # حفظ البيانات المجمعة
             if st.button("Download Clustered Data"):
                 csv = df_clustered.to_csv(index=False)
                 st.download_button(
