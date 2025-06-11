@@ -108,7 +108,7 @@ try:
             st.success("✅ No duplicate values found.")
 except Exception as e:
         st.error(f"❌ Error while removing duplicates: {e}")
-      
+    
 show_missing_value_percent(df)
 
 st.subheader("Drop Columns with Missing Values")
@@ -129,7 +129,7 @@ if columns_to_drop:
 
 st.dataframe(df.head())
             
-          
+        
 
 
 st.header("Missing Values Visualization")
@@ -578,8 +578,8 @@ with viz_tab2:
         cat_col = st.selectbox("Select categorical column", cat_cols, key='cat_col')
         
         cat_plot_type = st.radio("Select plot type", 
-                               ["Bar Plot", "Pie Chart", "Lollipop Plot", "Treemap"],
-                               key='cat_plot_type')
+                            ["Bar Plot", "Pie Chart", "Lollipop Plot", "Treemap"],
+                            key='cat_plot_type')
         
         if st.button("Generate Categorical Plot"):
             fig, ax = plt.subplots(figsize=(10, 6))
@@ -591,7 +591,7 @@ with viz_tab2:
                 ax.tick_params(axis='x', rotation=45)
             elif cat_plot_type == "Pie Chart":
                 ax.pie(value_counts, labels=value_counts.index, autopct='%1.1f%%', 
-                      startangle=90, colors=sns.color_palette('pastel'))
+                    startangle=90, colors=sns.color_palette('pastel'))
                 ax.set_title(f"Pie Chart of {cat_col}")
             elif cat_plot_type == "Lollipop Plot":
                 ax.stem(value_counts.index, value_counts.values, basefmt=" ")
@@ -616,8 +616,8 @@ with viz_tab2:
             num_col_y = st.selectbox("Select numerical column", numeric_cols, key='num_col_y2')
         
         cat_num_plot_type = st.radio("Select plot type", 
-                                   ["Box Plot", "Violin Plot", "Swarm Plot", "Bar Plot"],
-                                   key='cat_num_plot')
+                                ["Box Plot", "Violin Plot", "Swarm Plot", "Bar Plot"],
+                                key='cat_num_plot')
         
         if st.button("Generate Categorical-Numerical Plot"):
             fig, ax = plt.subplots(figsize=(10, 6))
@@ -633,7 +633,7 @@ with viz_tab2:
                 ax.set_title(f"Swarm Plot: {cat_col_x} vs {num_col_y}")
             elif cat_num_plot_type == "Bar Plot":
                 sns.barplot(data=df, x=cat_col_x, y=num_col_y, ax=ax, palette='Set2', 
-                           estimator=np.mean, ci=95)
+                        estimator=np.mean, ci=95)
                 ax.set_title(f"Bar Plot (Mean): {cat_col_x} vs {num_col_y}")
             
             ax.tick_params(axis='x', rotation=45)
@@ -665,8 +665,8 @@ else:
     
     st.write("Top 10 most correlated feature pairs:")
     st.dataframe(top_pairs.reset_index().rename(columns={'level_0': 'Feature 1', 
-                                                      'level_1': 'Feature 2', 
-                                                      0: 'Correlation'}))
+                                                    'level_1': 'Feature 2', 
+                                                    0: 'Correlation'}))
 
 
 
