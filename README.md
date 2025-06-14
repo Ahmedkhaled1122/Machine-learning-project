@@ -23,7 +23,7 @@ Welcome to the Titanic Classification with GUI project! A perfect blend of machi
 - [Built With](#built-with-️)
 - [Contact](#contact-)
 
----
+
 
 ## About the Project 💻
 
@@ -84,8 +84,21 @@ The project follows a structured workflow:
 If you’d like to test the prediction tool yourself, you can run the Streamlit GUI locally:
 
 ```bash
-streamlit run gui_app.py
+streamlit run Machine Learning.py
 ```
+
+---
+
+## 👥 Team Members
+
+- Hend Ramadan
+- Ahmed Khaled   
+- Menna Nour  
+- Malak Ahmed  
+- Mina Ibrahim  
+
+---
+
 ## Contact ☎️
 
 For any questions or inquiries, please feel free to reach out through the following channels:
