@@ -91,8 +91,8 @@ streamlit run Machine Learning.py
 
 ## 👥 Team Members
 
-- Hend Ramadan
-- Ahmed Khaled   
+- Ahmed Khaled  
+- Hend Ramadan 
 - Menna Nour  
 - Malak Ahmed  
 - Mina Ibrahim  
